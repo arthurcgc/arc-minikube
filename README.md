@@ -1,4 +1,4 @@
-# GHA Step Exporter - POC
+# Arc Minikube
 
 Infrastructure setup utility for deploying GitHub Actions Runner Controller (ARC) on minikube with optional sidecar support.
 
