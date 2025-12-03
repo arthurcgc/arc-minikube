@@ -1,0 +1,10 @@
+.env
+*.pem
+
+# Go build artifacts
+vendor/
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib

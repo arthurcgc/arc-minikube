@@ -1,0 +1,43 @@
+# Copy this file to your repo's .github/workflows/ directory
+# It runs on the ARC runner and executes several steps to validate the sidecar
+
+name: POC Test
+
+on:
+  workflow_dispatch:
+    # Manual trigger
+    # Uncomment to run every minute (for stress testing):
+    # schedule:
+    #   - cron: '* * * * *'
+
+jobs:
+  test-steps:
+    runs-on: arc-runner-set # Must match the scale set name
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Quick step
+      run: |
+        echo "This step is fast"
+        sleep 2
+
+    - name: Medium step
+      run: |
+        echo "This step takes a bit longer"
+        sleep 5
+
+    - name: Slow step
+      run: |
+        for i in $(seq 1 600); do
+          printf 'Tick %d/600 (elapsed %02d:%02d)\n' "$i" $(( (i-1)/60 )) $(( (i-1)%60 ))
+          sleep 1
+        done
+
+    - name: another image
+      uses: docker://alpine:3.18
+      with:
+        args: "sh -c 'echo Hello from lightweight action && sleep 1'"
+
+    - name: Final step
+      run: echo "All done!"
