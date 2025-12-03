@@ -43,44 +43,13 @@ cp .github/workflows/poc-test.yaml /path/to/your-repo/.github/workflows/
 cd /path/to/your-repo && git add . && git commit -m "Add POC test" && git push
 
 # 4. Trigger the workflow (GitHub UI -> Actions -> POC Test -> Run workflow)
-
-# 5. Watch sidecar output
-./setup.sh watch
-```
-
-## Expected Output
-
-When a workflow runs, you should see:
-
-```
-[+] Found runner pod: arc-runner-set-xxxxx-runner-xxxxx
-[+] Tailing step-exporter container logs...
-----------------------------------------
-[14:23:01] Sidecar starting, watching: /diag
-[14:23:01] Directory found, watching for Worker_*.log
-[14:23:05] Tailing: Worker_20241203-142305-utc.log
-🟢 START  | Set up job
-✅ FINISH | Set up job | Success | 1.234s
-🟢 START  | Run actions/checkout@v4
-✅ FINISH | Run actions/checkout@v4 | Success | 3.456s
-🟢 START  | Quick step
-✅ FINISH | Quick step | Success | 2.012s
-🟢 START  | Medium step
-✅ FINISH | Medium step | Success | 5.034s
-🟢 START  | Slow step
-✅ FINISH | Slow step | Success | 10.021s
-🟢 START  | Final step
-✅ FINISH | Final step | Success | 0.089s
-🟢 START  | Complete job
-✅ FINISH | Complete job | Success | 0.567s
-----------------------------------------
 ```
 
 ## What This Enables
 
 When used with a sidecar image, this setup provides:
 
-- ✅ Shared `/home/runner/_work` volume for accessing action directories and `.completed` files
+- ✅ Shared `/home/runner/_work` volume for accessing action directories
 - ✅ Docker socket access for monitoring container resources
 - ✅ Access to `_diag/Worker_*.log` files for step timing extraction
 - ✅ Isolated test environment on minikube
