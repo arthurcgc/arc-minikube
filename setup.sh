@@ -19,6 +19,7 @@ die()  { echo -e "${RED}[x]${NC} $*"; exit 1; }
 PROFILE="arc-minikube"
 RUNNER_NS="arc-runners"
 CONTROLLER_NS="arc-systems"
+MONITORING_NS="monitoring"
 
 usage() {
     cat <<EOF
@@ -72,6 +73,26 @@ load_sidecar_image() {
     else
         log "No SIDECAR_IMAGE provided, skipping sidecar"
     fi
+}
+
+deploy_prometheus() {
+    log "Adding prometheus-community helm repo..."
+    helm repo add prometheus-community https://prometheus-community.github.io/helm-charts 2>/dev/null || true
+    helm repo update
+
+    log "Deploying Prometheus with Pushgateway..."
+    kubectl create namespace "$MONITORING_NS" 2>/dev/null || true
+    helm upgrade --install prometheus prometheus-community/prometheus \
+        --namespace "$MONITORING_NS" \
+        --set pushgateway.enabled=true \
+        --set alertmanager.enabled=false \
+        --set prometheus-node-exporter.enabled=false \
+        --set kube-state-metrics.enabled=false \
+        --set server.persistentVolume.enabled=false \
+        --wait
+
+    log "Prometheus deployed!"
+    log "Pushgateway URL: http://prometheus-prometheus-pushgateway.$MONITORING_NS.svc.cluster.local:9091"
 }
 
 deploy_arc() {
@@ -145,6 +166,8 @@ template:
             valueFrom:
               fieldRef:
                 fieldPath: metadata.labels['actions.github.com/scale-set-name']
+          - name: PUSHGATEWAY_URL
+            value: http://prometheus-prometheus-pushgateway.${MONITORING_NS}.svc.cluster.local:9091
         volumeMounts:
           - name: work
             mountPath: /work
@@ -202,6 +225,7 @@ case "${1:-}" in
         check_deps
         create_cluster
         load_sidecar_image
+        deploy_prometheus
         deploy_arc
         ;;
     cleanup)
