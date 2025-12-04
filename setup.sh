@@ -97,6 +97,9 @@ deploy_arc() {
         --from-literal=github_app_installation_id="$GITHUB_APP_INSTALLATION_ID" \
         --from-file=github_app_private_key="$GITHUB_APP_PRIVATE_KEY_FILE"
 
+    log "Applying RBAC for metrics access..."
+    kubectl apply -f rbac.yaml
+
     if [[ -n "${SIDECAR_IMAGE:-}" ]]; then
         log "Deploying runner scale set with sidecar..."
         helm upgrade --install arc-runner-set \
@@ -112,6 +115,7 @@ deploy_arc() {
             --wait <<YAML
 template:
   spec:
+    serviceAccountName: runner-metrics
     containers:
       - name: runner
         image: ghcr.io/actions/actions-runner:latest
@@ -119,14 +123,34 @@ template:
         volumeMounts:
           - name: work
             mountPath: /home/runner/_work
+          - name: diag
+            mountPath: /home/runner/_diag
           - name: docker-sock
             mountPath: /var/run/docker.sock
-      - name: step-exporter
+      - name: workflow-resource-exporter
         image: ${SIDECAR_IMAGE}
         imagePullPolicy: Never
+        env:
+          - name: POD_NAME
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.name
+          - name: POD_NAMESPACE
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.namespace
+          - name: DIAG_PATH
+            value: /diag
+          - name: RUNNER_SET_NAME
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.labels['actions.github.com/scale-set-name']
         volumeMounts:
           - name: work
             mountPath: /work
+            readOnly: true
+          - name: diag
+            mountPath: /diag
             readOnly: true
           - name: docker-sock
             mountPath: /var/run/docker.sock
@@ -137,6 +161,8 @@ template:
             memory: 128Mi
     volumes:
       - name: work
+        emptyDir: {}
+      - name: diag
         emptyDir: {}
       - name: docker-sock
         hostPath:
